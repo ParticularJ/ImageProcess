@@ -340,21 +340,78 @@ using namespace cv;
 //}
 
 int main() {
-	Mat src, dst;
+	Mat src, dst,dst1;
 	src = imread("2.bmp", 0);
-	threshold(src, dst, 35, 255, 0);
-	Mat element = getStructuringElement(MORPH_ELLIPSE, Size(7, 7));
-	erode(dst, dst, element);
-	//dilate(dst, dst, element);
+	//获得合适的dft变换尺寸
+	int m = getOptimalDFTSize(src.rows);
+	int n = getOptimalDFTSize(src.cols);
+	//将添加的元素初始化为0
+	Mat padded;
+	copyMakeBorder(src, padded, 0, m - src.rows, 0, n - src.cols,BORDER_CONSTANT,Scalar::all(0));
+	//为实部和虚部分配空间,
+	Mat planes[] = { Mat_<float>(padded),Mat::zeros(padded.size(),CV_32F) };
+	Mat complexI;
+	//2代表输入矩阵的个数
+	merge(planes,2, complexI);
+	dft(complexI, complexI);
+	//分离通道，分别是实部和虚部,并且计算幅值
+	split(complexI, planes);
+	magnitude(planes[0], planes[1], planes[0]);
+	Mat magnitudeImage = planes[0];
 
-	//imshow(" ", dst);
-	//waitKey(0);
-	Mat mask = dst;
-	Mat image;
-	image=Mat::zeros(src.size(),src.type());
+	//进行对数尺度缩放
+	magnitudeImage += Scalar::all(1);
+	log(magnitudeImage, magnitudeImage);
 
-	src.copyTo(image, mask);
-	imshow(" ", image);
+	//剪切和重分布，奇数行去掉，因为是虚部的
+	//数&-2，返回最大的偶数
+	magnitudeImage = magnitudeImage(Rect(0, 0, magnitudeImage.cols&-2, magnitudeImage.rows&-2));
+	//重新排列使得远点位于中心
+	int cx = magnitudeImage.cols / 2;
+	int cy = magnitudeImage.rows / 2;
+	Mat q0(magnitudeImage, Rect(0, 0, cx, cy)); //top left
+	Mat q1(magnitudeImage, Rect(cx, 0, cx, cy));//top right
+	Mat q2(magnitudeImage, Rect(0, cy, cx, cy));//bottom left
+	Mat q3(magnitudeImage, Rect(cx, cy, cx, cy));//bottom right
+	//交换象限，便于显示
+	Mat tmp;
+	q0.copyTo(tmp);
+	q3.copyTo(q0);
+	tmp.copyTo(q3);
+	q1.copyTo(tmp);
+	q2.copyTo(q1);
+	tmp.copyTo(q2);
+
+	//归一化，便于显示
+	normalize(magnitudeImage, magnitudeImage, 0, 1, CV_MINMAX);
+	dst = Mat::zeros(magnitudeImage.size(), magnitudeImage.type());
+	int x_center = magnitudeImage.cols / 2;
+	int y_center = magnitudeImage.rows / 2;
+	//dft(src, dst);
+	//LowPass
+	for (int x = 0; x < magnitudeImage.rows; x++) {
+		for (int y = 0; y < magnitudeImage.cols; y++) {
+			if (sqrt((x - x_center)*(x - x_center) + (y - y_center)*(y - y_center)) >15) {
+							dst.at<float>(y, x) = 0;
+						}
+						else
+							dst.at<float>(y, x) = magnitudeImage.at<float>(y, x);
+			}
+		}
+	//Baterwase
+	dst1 = Mat::zeros(magnitudeImage.size(), magnitudeImage.type());
+	for (int x = 0; x < magnitudeImage.rows; x++) {
+		for (int y = 0; y < magnitudeImage.cols; y++) {
+			int a =sqrt((x - x_center)*(x - x_center) + (y - y_center)*(y - y_center)) / 10;
+			float b=1/(1+pow(a, 4));
+			//cout << b << endl;
+				dst1.at<float>(y, x) =b* magnitudeImage.at<float>(y, x);
+		}
+	}
+
+	imshow(" ", magnitudeImage);
+	imshow(" bate", dst1);
+	imshow("低通",dst);
 	waitKey(0);
 	return 0;
 }
