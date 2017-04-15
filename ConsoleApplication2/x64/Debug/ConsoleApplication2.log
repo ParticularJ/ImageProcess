@@ -1,0 +1,4 @@
+﻿C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\V140\Microsoft.CppBuild.targets(392,5): warning MSB8028: The intermediate directory (x64\Debug\) contains files shared from another project (ConsoleApplication2.vcxproj).  This can lead to incorrect clean and rebuild behavior.
+  Source.cpp
+  ConsoleApplication2.vcxproj -> C:\Myself\example\opencv_C++\ConsoleApplication2\x64\Debug\imgtest.exe
+  ConsoleApplication2.vcxproj -> C:\Myself\example\opencv_C++\ConsoleApplication2\x64\Debug\imgtest.pdb (Full PDB)
