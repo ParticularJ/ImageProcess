@@ -339,7 +339,7 @@ using namespace cv;
 //	return 0;
 //}
 
-int main() {
+/*int main() {
 	Mat src, dst,dst1,dst2,dst3,dst4;
 	src = imread("2.bmp", 0);
 	//获得合适的dft变换尺寸
@@ -420,6 +420,85 @@ int main() {
 	imshow("CV_8U", dst3);
 	imshow(" bate", dst4);
 	imshow("低通",dst);
+	waitKey(0);
+	return 0;
+}
+*/
+
+int main() {
+
+	Mat src,dst;
+	src = imread("3.bmp", 0);
+	imshow("原图", src);
+	//计算图像的直方图
+	const int channels[1] = { 0 };
+	const int histSize[1] = { 256 };
+	float hranges[2] = { 0,255 };
+	const float* ranges[1] = { hranges };
+	MatND hist;
+	calcHist(&src, 1, channels, Mat(), hist, 1, histSize, ranges);
+	double maxVal = 0;
+	double minVal = 0;
+
+	//找到直方图中的最大值和最小值
+	minMaxLoc(hist, &minVal, &maxVal, 0, 0);
+	int high = hist.rows;
+	Mat histImg(high, high, CV_8U, Scalar(255));
+	// 设置最大峰值为图像高度的18倍
+	int hpt = static_cast<int>(18 * high);
+
+	//for (int h = 0; h<high; h++)
+	//{
+	//	float binVal = hist.at<float>(h);
+	//	int intensity = static_cast<int>(binVal*hpt / maxVal);
+	//	line(histImg, Point(h, high), Point(h, high - intensity), Scalar::all(0));
+	//}
+
+	//提取胶囊
+	//防止在后面寻找谷底时的误差，对直方图平滑处理
+	for (int j = 0; j < 3; j++)
+		for (int i = 1; i < high - 1; i++)
+		{
+			hist.at<float>(i) = (hist.at<float>(i - 1) + hist.at<float>(i) +
+				hist.at<float>(i + 1)) / 3;
+		}
+	
+	//显示平均后的直方图
+	for (int h = 0;h<high;h++)
+	{
+	float binVal = hist.at<float>(h);
+	int intensity = static_cast<int>(binVal*hpt / maxVal);
+	line(histImg, Point(h, high), Point(h, high - intensity), Scalar::all(0));
+	}
+	imshow("showImage", histImg);
+	
+	//只有当前像素值的像素个数都小于等于两边时，才被认为谷底。这边取3个像素的宽度
+	int count = 0, minPoint, maxPoint;
+	for (int i = 3; i < high - 3; i++)
+	{
+		if (hist.at<float>(i) <= hist.at<float>(i - 3) && hist.at<float>(i) <= hist.at<float>(i - 2) &&
+			hist.at<float>(i) <= hist.at<float>(i - 1) && hist.at<float>(i) <= hist.at<float>(i + 1) &&
+			hist.at<float>(i) <= hist.at<float>(i + 2) && hist.at<float>(i) <= hist.at<float>(i + 3))
+		{
+			count++;
+			if (count == 1)  //第一个谷底
+				minPoint = i;
+			else if (count ==5)  //第五个谷底
+				maxPoint = i;
+		}
+	}
+	//根据波谷值判断胶囊的显示
+	for (int i = 0; i<src.rows; i++)
+		for (int j = 0; j < src.cols; j++)
+		{
+			if (src.at<uchar>(i, j) < minPoint || src.at<uchar>(i, j) > maxPoint)
+				src.at<uchar>(i, j) = 255;
+		}
+	//进行闭运算，去除干扰边界
+	Mat element = getStructuringElement(0, Size(3, 3), Point(-1, -1));
+	dilate(src, dst, element,Point(-1,-1),5);
+	erode(dst, dst, element, Point(-1, -1), 5);
+	imshow("", dst);
 	waitKey(0);
 	return 0;
 }
