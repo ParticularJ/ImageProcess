@@ -340,7 +340,7 @@ using namespace cv;
 //}
 
 int main() {
-	Mat src, dst,dst1,dst2,dst3;
+	Mat src, dst,dst1,dst2,dst3,dst4;
 	src = imread("2.bmp", 0);
 	//获得合适的dft变换尺寸
 	int m = getOptimalDFTSize(src.rows);
@@ -354,6 +354,7 @@ int main() {
 	//2代表输入矩阵的个数
 	merge(planes,2, complexI);
 	dft(complexI, complexI);
+
 	//分离通道，分别是实部和虚部,并且计算幅值
 	split(complexI, planes);
 	magnitude(planes[0], planes[1], planes[0]);
@@ -387,17 +388,19 @@ int main() {
 	dst = Mat::zeros(magnitudeImage.size(), magnitudeImage.type());
 	int x_center = magnitudeImage.cols / 2;
 	int y_center = magnitudeImage.rows / 2;
-	//dft(src, dst);
+
 	//LowPass
 	for (int x = 0; x < magnitudeImage.rows; x++) {
 		for (int y = 0; y < magnitudeImage.cols; y++) {
-			if (sqrt((x - x_center)*(x - x_center) + (y - y_center)*(y - y_center)) >15) {
+			if (sqrt((x - x_center)*(x - x_center) + (y - y_center)*(y - y_center)) <50) {
 							dst.at<float>(y, x) = 0;
 						}
 						else
-							dst.at<float>(y, x) = magnitudeImage.at<float>(y, x);
+							dst.at<float>(y, x) =complexI.at<float>(y,x)* magnitudeImage.at<float>(y, x);
 			}
 		}
+	idft(dst, dst4, DFT_REAL_OUTPUT);
+	normalize(dst4, dst4, 0, 1, CV_MINMAX);
 	//Baterwase
 	//通过bat公式可得到，
 	dst1 = Mat::zeros(magnitudeImage.size(), magnitudeImage.type());
@@ -415,7 +418,7 @@ int main() {
 		}
 	imshow("yuanyu ", magnitudeImage);
 	imshow("CV_8U", dst3);
-	//imshow(" bate", dst1);
+	imshow(" bate", dst4);
 	imshow("低通",dst);
 	waitKey(0);
 	return 0;
