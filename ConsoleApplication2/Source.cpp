@@ -340,7 +340,7 @@ using namespace cv;
 //}
 
 int main() {
-	Mat src, dst,dst1;
+	Mat src, dst,dst1,dst2,dst3;
 	src = imread("2.bmp", 0);
 	//获得合适的dft变换尺寸
 	int m = getOptimalDFTSize(src.rows);
@@ -399,6 +399,7 @@ int main() {
 			}
 		}
 	//Baterwase
+	//通过bat公式可得到，
 	dst1 = Mat::zeros(magnitudeImage.size(), magnitudeImage.type());
 	for (int x = 0; x < magnitudeImage.rows; x++) {
 		for (int y = 0; y < magnitudeImage.cols; y++) {
@@ -406,11 +407,15 @@ int main() {
 			float b=1/(1+pow(a, 4));
 			//cout << b << endl;
 				dst1.at<float>(y, x) =b* magnitudeImage.at<float>(y, x);
+				//将32F转化为CV_8U,
+				float c = 255 * dst1.at<float>(y, x);
+				dst1.at<float>(y, x) = c;
+				dst1.convertTo(dst3, CV_8U);
+				}
 		}
-	}
-
-	imshow(" ", magnitudeImage);
-	imshow(" bate", dst1);
+	imshow("yuanyu ", magnitudeImage);
+	imshow("CV_8U", dst3);
+	//imshow(" bate", dst1);
 	imshow("低通",dst);
 	waitKey(0);
 	return 0;
